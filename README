@@ -1,0 +1,8 @@
+-------------------------------------------------------------------------------
+ About
+-------------------------------------------------------------------------------
+Finder is a JavaScript based module to provide a intuitive navigation is a tree
+based UI structure. 
+
+The input to the finder is a JSON config and the current selected node. The 
+code in demo is self explanatory and has required documentation.

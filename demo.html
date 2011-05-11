@@ -1,0 +1,181 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+	<title>Interactive Finder</title>
+	<style type="text/css">
+			body {
+				margin: 0 auto;
+				width: 990px;
+			} 
+			h1 {
+				margin: 40px 0 30px;
+				color: gray;
+				text-align: center;
+			}
+			#finder {
+				border: 5px groove #C0D9D9;
+				height: 205px;
+				padding: 10px;
+				overflow: hidden;
+			}
+			#finder div {
+				float: left;
+				border: 1px solid gray;
+				height: 200px;
+				width: 100px;
+				text-align: center;
+				line-height: 200px;
+			}
+			a {
+				color: black;
+			}
+			.show {
+				display: block;
+			}
+			.hide {
+				display: none;
+			}
+			.selected {
+				background-color: gold;
+			}
+	</style>		
+</head>
+<body>
+	<h1>Interactive Finder</h1>
+	<div id="finder" onclick="reflow(event);">
+		<a href="#">
+			<div id="f1" class="hide">All</div>
+			
+			<div id="f11" class="hide">Head</div>
+			<div id="f12" class="hide">Bulbs</div>
+			<div id="f13" class="hide">Others</div>
+			
+			<div id="f111" class="hide">Assembly</div>
+			<div id="f112" class="hide">Kits</div>
+			<div id="f121" class="hide">LED</div>
+			<div id="f122" class="hide">Xenon</div>
+			
+			<div id="f1111" class="hide">Left</div>
+			<div id="f1112" class="hide">Right</div>
+			<div id="f1121" class="hide">Red</div>
+			<div id="f1122" class="hide">Blue</div>												
+		</a>
+	</div>
+	<script>
+		var finderConfig = {
+				"f1": {parent: null, children: ["f11","f12", "f13"]},
+				"f11": {parent: "f1", children: ["f111","f112"]},
+				"f12": {parent: "f1", children: ["f121","f122"]},
+				"f13": {parent: "f1", children: []},
+				"f111": {parent: "f11", children: ["f1111","f1112"]},
+				"f112": {parent: "f11", children: ["f1121","f1122"]},
+				"f121": {parent: "f12", children: []},
+				"f122": {parent: "f12", children: []},
+				"f1111": {parent: "f111", children: [], multiSelect: 1},
+				"f1112": {parent: "f111", children: [], multiSelect: 1},
+				"f1121": {parent: "f112", children: []},
+				"f1122": {parent: "f112", children: []}
+		},
+		selected = ["f1"];
+
+		var finderEngine = (function(finderConfig){
+				var localConfig = finderConfig, // maintaining a local config TODO clone it
+					hash = [], // Hash inventory of fids
+					finderNodes = (function(){ // All the div elements 1 time parsing for perf
+						var clones = [];
+						for(var key in localConfig){
+							clones[key] = document.getElementById(key);
+						}
+						return clones;
+					})(),
+					selections = []; // Global selections holder
+				
+				return {
+					buildParentHash: function(fid) {
+						var finder = localConfig[fid];
+						// Empty return immediately
+						if(!finder) {
+							return;
+						}
+						// If parent present call recursively
+						if(finder.parent) {
+							this.buildParentHash(finder.parent);
+						}
+						hash[fid] = 1;
+						
+					},
+					buildChildrenHash: function(fid) {
+						var finder = localConfig[fid], 
+							i = 0,
+							l = finder && finder.children.length;
+
+						// Setting the right finder
+						finder = l? finder.children: localConfig[finder.parent].children;
+						// Restting length again
+						l = finder.length;
+						
+						for(; i<l; i++){
+							hash[finder[i]] = 1;
+						}
+					},
+					buildFinderHash: function(fid) {
+						this.buildParentHash(fid);
+						this.buildChildrenHash(fid);
+					},
+					isLastNode: function(fid) {
+						return localConfig[fid] && !localConfig[fid].children.length
+					},
+					reflow: function(fid) {
+						// If already selected do not do anything
+						if(selections.length && selections[0] == fid) {
+							return false;
+						}
+						var t = this, className;
+						t.reset();
+						t.buildFinderHash(fid);
+						// Update selections
+						selections.push(fid);
+						for(var id in finderNodes) {
+							if(hash[id]) {															
+								className = "show";
+								if(t.isLastNode(fid) && // Apply selection criteria
+										(id == fid  || // Selected fid
+										(/selected/.test(finderNodes[id].className) && localConfig[id].multiSelect))) { // handle multiple select
+									className += " selected";
+									// Update selections for multi select
+									(id != fid) && selections.push(id);
+								}
+							} else {
+								className = "hide";
+							}							
+							finderNodes[id].className = className;							
+						}
+					},
+					init: function(fids) {
+						// Checking for array type and type casting
+						fids = fids.constructor === Array? fids: [fids];
+
+						var i=0, l=fids.length;
+						for(; i<l; i++) {
+							this.reflow(fids[i]);
+						}
+					},
+					reset: function() {
+						hash = [];
+						selections = [];
+					}					
+				};
+
+			})(finderConfig);
+
+		function reflow(event) {
+			var elem = event.srcElement? event.srcElement: event.target;			
+			finderEngine.reflow(elem.id);
+		}
+
+		// Page initializations
+		finderEngine.init(selected);
+	</script>
+</body>
+</html>
